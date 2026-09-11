@@ -16,9 +16,8 @@ class Assistant:
                 "name": "time",
                 "description": "Returns the current Date including year month day hour minute and seconds",
                 "parameters": {
-                
+                    "required": []
                 },
-                "required": []
             }
         }
         self.calculator_tool = {
@@ -39,8 +38,8 @@ class Assistant:
                     "b": {
                         "type": "number"
                     }
-                },
-                "required": ["operation", "a", "b"]
+                    },
+                    "required": ["operation", "a", "b"]
                 }
             }
         }
@@ -88,39 +87,50 @@ class Assistant:
 
     def chat(self) -> bool:
         tmp = input("> ")
-
         if tmp.strip().lower() == "exit":
             print("Exit Programm")
             return False
 
-        # 1. User-Nachricht speichern
+        # User-Nachricht speichern
         self.messages.append({
             "role": "user",
             "content": tmp
         })
 
-        # 2. Erste Antwort vom LLM
+        # Erste Antwort vom LLM
         message = self.llm.chat(self.messages, self.tools)
-
-        # 3. Assistant-Message IMMER speichern
         self.messages.append(message)
 
-        # 4. Prüfen, ob ein Tool verlangt wurde
-        if "tool_calls" in message:
-            tool_call = message["tool_calls"][0]
-            self.execute_tool(tool_call)            
-        else:
-            print(message["content"])
+        if not message.get("tool_calls"):
+            return True
+
+        # Dispatcher
+        while message.get("tool_calls"):
+            tool_calls = message["tool_calls"]
+
+            for tool_call in  tool_calls:
+
+                result= self.execute_tool(tool_call)   
+                self.messages.append({
+                    "role": "tool",
+                    "content": str(result)
+                })
+
+            message = self.llm.chat(self.messages, self.tools)
+            self.messages.append(message)
+          
         return True
     
+    # execute the Tools and returns the result
     def execute_tool(self, tool_call):
         function = tool_call["function"]
         arguments = function.get("arguments", {})
+        name = function["name"]
 
-        if function["name"] == "time":
+        if name == "time":
             result = self.timer.get_time()
 
-        elif function["name"] == "calculator":
+        elif name == "calculator":
             result = self.calc(
                 arguments["operation"],
                 arguments["a"],
@@ -129,16 +139,7 @@ class Assistant:
 
         else:
             result = "Unknown tool."
-
-        self.messages.append({
-            "role": "tool",
-            "content": result
-        })
-
-        final_message = self.llm.chat(self.messages, self.tools)
-        self.messages.append(final_message)
-
-        print(final_message["content"])
+        return result
             
     def show_history(self):
         # Foreach
