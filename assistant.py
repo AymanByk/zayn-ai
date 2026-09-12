@@ -2,6 +2,7 @@ from memory_manager import MemoryManager
 from tools.calculator import CalculatorTool
 from tools.time_tool import TimeTool
 from llm_client import LLMClient
+from tools.tool_definitions import ToolDefinitions
 
 class Assistant:
     def __init__(self):
@@ -10,53 +11,19 @@ class Assistant:
         self.manager = MemoryManager()
         self.llm = LLMClient()
         self.messages=[]
-        self.time_tool={
-            "type": "function",
-            "function": {
-                "name": "time",
-                "description": "Returns the current Date including year month day hour minute and seconds",
-                "parameters": {
-                    "required": []
-                },
-            }
-        }
-        self.calculator_tool = {
-            "type": "function",
-            "function": {
-                "name": "calculator",
-                "description": "Performs arithmetic calculations such as addition, subtraction, multiplication and division",
-                "parameters": {
-                "type": "object",
-                "properties": {
-                    "operation": {
-                        "type": "string",
-                        "enum": ["add", "subtract", "multiply", "divide"]
-                    },
-                    "a": {
-                        "type": "number"
-                    },
-                    "b": {
-                        "type": "number"
-                    }
-                    },
-                    "required": ["operation", "a", "b"]
-                }
-            }
-        }
-        self.tools=[self.calculator_tool,self.time_tool]
+        self.tools= self.tools = ToolDefinitions().tools
                 
            
     def greet(self):
         name= self.manager.get_name().strip()
         if  name!= "":
             print(f"Hello, {name}")
-            self.manager.history_add("hello")
         else:
             self.name()
 
     def name(self):
         name = input("What is your Name? ")
-        print(f"Nice to meet you, {name}. I saved your Name in the DataBase.")
+        print(f"Nice to meet you, {name}. Your Name has been saved.")
         self.manager.set_name(name)
 
     def calc(self,operation:str,a,b)->str:
@@ -77,7 +44,6 @@ class Assistant:
                 case _:
                     return str(result)
                     
-            self.manager.history_add("calc")
 
         except ValueError:
             return "Only numbers are accepted."
@@ -91,13 +57,13 @@ class Assistant:
             print("Exit Programm")
             return False
 
-        # User-Nachricht speichern
+        # save users input 
         self.messages.append({
             "role": "user",
             "content": tmp
         })
 
-        # Erste Antwort vom LLM
+        # First Answer from LLM
         message = self.llm.chat(self.messages, self.tools)
         self.messages.append(message)
 
@@ -137,34 +103,33 @@ class Assistant:
                 arguments["b"]
             )
 
+        elif name == "remember":
+            key = arguments["key"]
+            value = arguments["value"]
+            self.manager.remember(key, value)
+
+            result = "Saved Memory"
+
+        elif name == "forget":
+            result = f"Memory has been deleted"
+            key= arguments["key"]
+            if self.manager.forget(arguments["key"]) == False:
+                result= f"No memory found for '{key}'."
+
+        elif name == "swap_value":
+            result = self.manager.swap_value(
+                arguments["key"],
+                arguments["value"]
+            )
+
+        elif name == "get_memory":
+            key = arguments["key"]
+            result = self.manager.get_memory(key)
+
+        elif name== "list_memories":
+            result= self.manager.list_memories()
+
         else:
             result = "Unknown tool."
         return result
             
-    def show_history(self):
-        # Foreach
-        for item in self.manager.get_memory("history"):
-            print(item)
-
-    def remember(self):
-        key = input("Key: ")
-        value = input("Value: ")
-        if(self.manager.remember(key,value)):
-            print("Saved")
-        else:
-            print("Error")
-
-    def forget(self):
-        key = input("What should I forget: ")
-        
-        if self.manager.forget(key):
-            print(f"Forgot {key}")
-        else:
-            print("Key was not in Memories.")
-
-    def show_memory(self):
-        self.manager.show_memory()
-
-    def time(self):
-        print(f"Current time: {self.timer.get_time()}")
-        self.manager.history_add("time")
