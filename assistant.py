@@ -3,6 +3,7 @@ from tools.calculator import CalculatorTool
 from tools.time_tool import TimeTool
 from llm_client import LLMClient
 from tools.tool_definitions import ToolDefinitions
+from system_prompt import SYSTEM_PROMPT
 
 class Assistant:
     def __init__(self):
@@ -10,13 +11,20 @@ class Assistant:
         self.timer = TimeTool()
         self.manager = MemoryManager()
         self.llm = LLMClient()
-        self.messages=[]
-        self.tools= self.tools = ToolDefinitions().tools
+        self.messages = [
+            {
+                "role": "system",
+                "content": SYSTEM_PROMPT
+            }
+        ]
+        self.tools= ToolDefinitions().tools
+        self.max_tool_iterations= 20
                 
            
     def greet(self):
-        name= self.manager.get_name().strip()
-        if  name!= "":
+        name = self.manager.get_name().strip()
+        
+        if name:
             print(f"Hello, {name}")
         else:
             self.name()
@@ -53,83 +61,218 @@ class Assistant:
 
     def chat(self) -> bool:
         tmp = input("> ")
+
         if tmp.strip().lower() == "exit":
-            print("Exit Programm")
+            print("Exit Program")
             return False
 
-        # save users input 
         self.messages.append({
             "role": "user",
             "content": tmp
         })
 
-        # First Answer from LLM
         message = self.llm.chat(self.messages, self.tools)
+
+        # Erst Fehler prüfen
+        if "error" in message:
+            print(f"\nZayn error: {message['error']}")
+            return True
+
+        # Dann speichern
         self.messages.append(message)
 
         if not message.get("tool_calls"):
             return True
 
-        # Dispatcher
-        while message.get("tool_calls"):
+        tool_iteration = 0
+
+        while (
+            message.get("tool_calls")
+            and tool_iteration < self.max_tool_iterations
+        ):
+
             tool_calls = message["tool_calls"]
 
-            for tool_call in  tool_calls:
+            for tool_call in tool_calls:
 
-                result= self.execute_tool(tool_call)   
+                result = self.execute_tool(tool_call)
+
                 self.messages.append({
                     "role": "tool",
                     "content": str(result)
                 })
 
-            message = self.llm.chat(self.messages, self.tools)
+            tool_iteration += 1
+
+            message = self.llm.chat(
+                self.messages,
+                self.tools
+            )
+
+            if "error" in message:
+                print(f"\nZayn error: {message['error']}")
+                return True
+
             self.messages.append(message)
-          
+
+        if tool_iteration >= self.max_tool_iterations:
+            print("\nZayn error: Maximum tool iterations reached.")
+
         return True
     
     # execute the Tools and returns the result
     def execute_tool(self, tool_call):
-        function = tool_call["function"]
-        arguments = function.get("arguments", {})
-        name = function["name"]
+        try:
+            function = tool_call.get("function")
 
-        if name == "time":
-            result = self.timer.get_time()
+            if not function:
+                return {
+                    "success": False,
+                    "error": "Invalid tool call: missing function."
+                }
 
-        elif name == "calculator":
-            result = self.calc(
-                arguments["operation"],
-                arguments["a"],
-                arguments["b"]
-            )
+            name = function.get("name")
 
-        elif name == "remember":
-            key = arguments["key"]
-            value = arguments["value"]
-            self.manager.remember(key, value)
+            if not name:
+                return {
+                    "success": False,
+                    "error": "Invalid tool call: missing tool name."
+                }
 
-            result = "Saved Memory"
+            arguments = function.get("arguments", {})
 
-        elif name == "forget":
-            result = f"Memory has been deleted"
-            key= arguments["key"]
-            if self.manager.forget(arguments["key"]) == False:
-                result= f"No memory found for '{key}'."
+            if arguments is None:
+                arguments = {}
 
-        elif name == "swap_value":
-            result = self.manager.swap_value(
-                arguments["key"],
-                arguments["value"]
-            )
+            # TIME
+            if name == "time":
+                result = self.timer.get_time()
 
-        elif name == "get_memory":
-            key = arguments["key"]
-            result = self.manager.get_memory(key)
+                return {
+                    "success": True,
+                    "result": result
+                }
 
-        elif name== "list_memories":
-            result= self.manager.list_memories()
+            # CALCULATOR
+            elif name == "calculator":
+                operation = arguments.get("operation")
+                a = arguments.get("a")
+                b = arguments.get("b")
 
-        else:
-            result = "Unknown tool."
-        return result
+                if operation is None or a is None or b is None:
+                    return {
+                        "success": False,
+                        "error": "Missing calculator arguments."
+                    }
+
+                result = self.calc(operation, a, b)
+
+                return {
+                    "success": True,
+                    "result": result
+                }
+
+            # REMEMBER
+            elif name == "remember":
+                key = arguments.get("key")
+                value = arguments.get("value")
+
+                if key is None or value is None:
+                    return {
+                        "success": False,
+                        "error": "Missing remember arguments."
+                    }
+
+                self.manager.remember(key, value)
+
+                return {
+                    "success": True,
+                    "result": f"Memory '{key}' has been saved."
+                }
+
+            # FORGET
+            elif name == "forget":
+                key = arguments.get("key")
+
+                if key is None:
+                    return {
+                        "success": False,
+                        "error": "Missing forget argument: key."
+                    }
+
+                deleted = self.manager.forget(key)
+
+                if not deleted:
+                    return {
+                        "success": False,
+                        "error": f"No memory found for '{key}'."
+                    }
+
+                return {
+                    "success": True,
+                    "result": f"Memory '{key}' has been deleted."
+                }
+
+            # SWAP / UPDATE MEMORY VALUE
+            elif name == "swap_value":
+                key = arguments.get("key")
+                value = arguments.get("value")
+
+                if key is None or value is None:
+                    return {
+                        "success": False,
+                        "error": "Missing swap_value arguments."
+                    }
+
+                result = self.manager.swap_value(key, value)
+
+                return {
+                    "success": True,
+                    "result": result
+                }
+
+            # GET MEMORY
+            elif name == "get_memory":
+                key = arguments.get("key")
+
+                if key is None:
+                    return {
+                        "success": False,
+                        "error": "Missing get_memory argument: key."
+                    }
+
+                result = self.manager.get_memory(key)
+
+                if result is None:
+                    return {
+                        "success": False,
+                        "error": f"No memory found for '{key}'."
+                    }
+
+                return {
+                    "success": True,
+                    "result": result
+                }
+
+            # LIST MEMORIES
+            elif name == "list_memories":
+                result = self.manager.list_memories()
+
+                return {
+                    "success": True,
+                    "result": result
+                }
+
+            # UNKNOWN TOOL
+            else:
+                return {
+                    "success": False,
+                    "error": f"Unknown tool: {name}"
+                }
+
+        except Exception as e:
+            return {
+                "success": False,
+                "error": f"Tool execution failed: {e}"
+            }
             

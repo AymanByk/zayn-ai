@@ -1,7 +1,14 @@
 from assistant import Assistant
-#Entry Point
-my_assistant = Assistant()
-my_assistant.greet()
 
-while my_assistant.chat():
-    pass
+
+def main():
+    assistant = Assistant()
+
+    assistant.greet()
+
+    while assistant.chat():
+        pass
+
+
+if __name__ == "__main__":
+    main()

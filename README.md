@@ -85,9 +85,11 @@ zayn-ai/
 ├── assistant.py
 ├── llm_client.py
 ├── memory_manager.py
+├── system_prompt.py
 │
 ├── tools/
 │   ├── __init__.py
+|   ├── tool_definitions.py
 │   ├── calculator.py
 │   └── time_tool.py
 │

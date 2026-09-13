@@ -122,6 +122,8 @@ class ToolDefinitions:
                     "Use this when the relevant memory key is unknown."
                 ),
                 "parameters": {
+                    "type": "object",
+                    "properties": {},
                     "required": []
                 },
             }
