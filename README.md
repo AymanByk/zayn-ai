@@ -14,8 +14,7 @@ The project is currently under active development and is also used to learn abou
 - Conversation history
 - Persistent JSON memory
 - Function / tool calling
-- Calculator tool
-- Time tool
+- Task-loops
 - Modular separation between assistant logic, LLM communication, memory and tools
 
 ## How It Works
@@ -49,14 +48,14 @@ The LLM decides which tool should be used, while the Python application controls
 - [x] Basic persistent memory
 - [x] Calculator tool
 - [x] Function calling
-- [ ] Improve tool routing
-- [ ] Support multiple tool calls
-- [ ] Integrate additional tools
-- [ ] Improve error handling
+- [x] Improve tool routing
+- [x] Support multiple tool calls
+- [x] Integrate additional tools
+- [x] Improve error handling
 
 ### Planned
 
-- [ ] LLM-controlled memory
+- [x] LLM-controlled memory
 - [ ] File reading and writing
 - [ ] Code execution
 - [ ] Test execution
