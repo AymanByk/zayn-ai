@@ -1,3 +1,5 @@
+import json
+
 from memory_manager import MemoryManager
 from tools.calculator import CalculatorTool
 from tools.time_tool import TimeTool
@@ -86,10 +88,11 @@ class Assistant:
 
         tool_iteration = 0
 
-        while (
-            message.get("tool_calls")
-            and tool_iteration < self.max_tool_iterations
-        ):
+        while message.get("tool_calls"):
+            # Task-loop limit
+            if tool_iteration >= self.max_tool_iterations:
+                print("\nZayn error: Maximum tool iterations reached.")
+                return True
 
             tool_calls = message["tool_calls"]
 
@@ -99,7 +102,7 @@ class Assistant:
 
                 self.messages.append({
                     "role": "tool",
-                    "content": str(result)
+                    "content": json.dumps(result)
                 })
 
             tool_iteration += 1
@@ -114,9 +117,6 @@ class Assistant:
                 return True
 
             self.messages.append(message)
-
-        if tool_iteration >= self.max_tool_iterations:
-            print("\nZayn error: Maximum tool iterations reached.")
 
         return True
     
@@ -141,9 +141,15 @@ class Assistant:
 
             arguments = function.get("arguments", {})
 
-            if arguments is None:
-                arguments = {}
+            # Invalid arguments?
+            if isinstance(arguments, str):
+                arguments = json.loads(arguments)
 
+            if not isinstance(arguments, dict):
+                return {
+                    "success": False,
+                    "error": "Invalid tool arguments."
+                }
             # TIME
             if name == "time":
                 result = self.timer.get_time()
@@ -269,7 +275,12 @@ class Assistant:
                     "success": False,
                     "error": f"Unknown tool: {name}"
                 }
-
+        except json.JSONDecodeError:
+            return {
+                "success": False,
+                "error": "Tool arguments contained invalid JSON."
+            }
+        
         except Exception as e:
             return {
                 "success": False,

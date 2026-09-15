@@ -1,5 +1,6 @@
 import os
 import json
+from typing import Any
 import requests
 from dotenv import load_dotenv
 
@@ -38,6 +39,7 @@ class LLMClient:
             tool_calls = []
 
             for line in response.iter_lines():
+
                 if not line:
                     continue
 
@@ -49,15 +51,33 @@ class LLMClient:
                         "error": "Ollama returned invalid JSON."
                     }
 
+                # Response must be a dictionary
+                if not isinstance(chunk, dict):
+                    return {
+                        "error": "Ollama returned an invalid response format."
+                    }
+
+                # Error directly returned by Ollama
+                if chunk.get("error"):
+                    return {
+                        "error": f"Ollama error: {chunk['error']}"
+                    }
+
                 chunk_message = chunk.get("message")
 
-                if not isinstance(chunk_message, dict):
+                # Does stream chunks contain a message?
+                if chunk_message is None:
                     continue
+
+                if not isinstance(chunk_message, dict):
+                    return {
+                        "error": "Invalid message format from Ollama."
+                    }
 
                 # Normal streamed text
                 content = chunk_message.get("content", "")
 
-                if content:
+                if isinstance(content, str) and content:
                     print(content, end="", flush=True)
                     full_content += content
 
@@ -65,21 +85,32 @@ class LLMClient:
                 current_tool_calls = chunk_message.get("tool_calls")
 
                 if current_tool_calls:
+
+                    if not isinstance(current_tool_calls, list):
+                        return {
+                            "error": "Ollama returned invalid tool calls."
+                        }
+
                     tool_calls.extend(current_tool_calls)
 
-            message = {
+            # format
+            if full_content:
+                print()
+
+            
+            if not full_content and not tool_calls:
+                return {
+                    "error": "Ollama returned an empty response."
+                }
+
+            # message can contain strings AND lists
+            message: dict[str, Any] = {
                 "role": "assistant",
                 "content": full_content
             }
 
             if tool_calls:
                 message["tool_calls"] = tool_calls
-
-            # Completely empty response
-            if not full_content and not tool_calls:
-                return {
-                    "error": "Ollama returned an empty response."
-                }
 
             return message
 
@@ -101,4 +132,9 @@ class LLMClient:
         except requests.exceptions.RequestException as e:
             return {
                 "error": f"Request failed: {e}"
+            }
+
+        except Exception as e:
+            return {
+                "error": f"Unexpected LLM client error: {e}"
             }
