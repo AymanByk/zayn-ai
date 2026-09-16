@@ -128,10 +128,60 @@ class ToolDefinitions:
                 },
             }
         }
+        list_directory_tool = {
+            "type": "function",
+            "function": {
+                "name": "list_directory",
+                "description": (
+                    "Lists files and directories inside the current project. "
+                    "Use this to inspect the structure of the project."
+                ),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "path": {
+                            "type": "string",
+                            "description": (
+                                "Relative directory path inside the project. "
+                                "Use '.' for the project root."
+                            )
+                        }
+                    },
+                    "required": []
+                }
+            }
+        }
+        read_file_tool = {
+            "type": "function",
+            "function": {
+                "name": "read_file",
+                "description": (
+                    "Reads the contents of a text file inside the current project. "
+                    "Use this when you need to inspect source code or configuration files."
+                ),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "path": {
+                            "type": "string",
+                            "description": (
+                                "Relative path of the file inside the project."
+                            )
+                        }
+                    },
+                    "required": ["path"]
+                }
+            }
+        }
         
         self.tools = [
-            calculator_tool,time_tool,
-            remember_tool,forget_tool,
+            calculator_tool,
+            time_tool,
+            remember_tool,
+            forget_tool,
             swap_value_tool,
-            get_memory_tool,list_memories_tool
+            get_memory_tool,
+            list_memories_tool,
+            list_directory_tool,
+            read_file_tool
         ]

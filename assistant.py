@@ -6,12 +6,11 @@ from tools.time_tool import TimeTool
 from llm_client import LLMClient
 from tools.tool_definitions import ToolDefinitions
 from system_prompt import SYSTEM_PROMPT
+from tools.file_system import FileSystemTool
+from pathlib import Path
 
 class Assistant:
     def __init__(self):
-        self.calculator = CalculatorTool()
-        self.timer = TimeTool()
-        self.manager = MemoryManager()
         self.llm = LLMClient()
         self.messages = [
             {
@@ -19,6 +18,14 @@ class Assistant:
                 "content": SYSTEM_PROMPT
             }
         ]
+        
+        self.calculator = CalculatorTool()
+        self.timer = TimeTool()
+        self.manager = MemoryManager()
+        #path is current working directory
+        self.file_system = FileSystemTool(
+            project_root=str(Path.cwd())
+        )
         self.tools= ToolDefinitions().tools
         self.max_tool_iterations= 20
                 
@@ -268,6 +275,18 @@ class Assistant:
                     "success": True,
                     "result": result
                 }
+
+            # LIST DIRECTORY
+            elif name == "list_directory":
+                return self.file_system.list_directory(
+                    arguments.get("path", ".")
+                )
+
+            # READ_FILE
+            elif name == "read_file":
+                return self.file_system.read_file(
+                    arguments["path"]
+                )
 
             # UNKNOWN TOOL
             else:

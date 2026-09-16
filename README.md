@@ -90,6 +90,7 @@ zayn-ai/
 │   ├── __init__.py
 |   ├── tool_definitions.py
 │   ├── calculator.py
+|   ├── file_system.py
 │   └── time_tool.py
 │
 ├── .env.example
