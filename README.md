@@ -61,7 +61,7 @@ The LLM decides which tool should be used, while the Python application controls
 - [ ] Test execution
 - [ ] Code analysis
 - [ ] Approval system for system modifications
-- [ ] Long-term memory
+- [x] Long-term memory
 - [ ] Voice input and output
 - [ ] Desktop or web interface
 - [ ] Git/GitHub integration
