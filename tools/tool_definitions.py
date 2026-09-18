@@ -173,6 +173,49 @@ class ToolDefinitions:
                 }
             }
         }
+        search_files_tool = {
+            "type": "function",
+            "function": {
+                "name": "search_files",
+                "description": (
+                    "Searches files inside the current project. "
+                    "Can search by filename, file extension, "
+                    "or text contained inside files."
+                ),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "query": {
+                            "type": "string",
+                            "description": (
+                                "Optional filename search term. "
+                                "Example: 'memory' finds files whose names contain memory."
+                            )
+                        },
+                        "extension": {
+                            "type": "string",
+                            "description": (
+                                "Optional file extension filter, "
+                                "for example 'py', '.json' or 'md'."
+                            )
+                        },
+                        "content": {
+                            "type": "string",
+                            "description": (
+                                "Optional text that must appear inside the file."
+                            )
+                        },
+                        "max_results": {
+                            "type": "integer",
+                            "description": (
+                                "Maximum number of matching files to return."
+                            )
+                        }
+                    },
+                    "required": []
+                }
+            }
+        }
         
         self.tools = [
             calculator_tool,
@@ -183,5 +226,6 @@ class ToolDefinitions:
             get_memory_tool,
             list_memories_tool,
             list_directory_tool,
-            read_file_tool
+            read_file_tool,
+            search_files_tool 
         ]

@@ -287,6 +287,17 @@ class Assistant:
                 return self.file_system.read_file(
                     arguments["path"]
                 )
+            # SEARCH FILE
+            elif name == "search_files":
+                return self.file_system.search_files(
+                    query=arguments.get("query", ""),
+                    extension=arguments.get("extension"),
+                    content=arguments.get("content"),
+                    max_results=arguments.get(
+                        "max_results",
+                        50
+                    )
+                )
 
             # UNKNOWN TOOL
             else:
