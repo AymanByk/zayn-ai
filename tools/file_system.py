@@ -1,10 +1,11 @@
-from pathlib import Path
+from tools.project_context import ProjectContext
 
 
 class FileSystemTool:
 
-    def __init__(self, project_root: str):
-        self.project_root = Path(project_root).resolve()
+    def __init__(self, project_context: ProjectContext):
+
+        self.project_context = project_context
 
         self.ignored_directories = {
             ".git",
@@ -16,28 +17,12 @@ class FileSystemTool:
             "build"
         }
 
-        # 200 KB pro Datei
         self.max_file_size = 200 * 1024
-
-    def _safe_path(self, path: str) -> Path:
-
-        #Converts a relative path into an absolute path
-        target = (self.project_root / path).resolve()
-
-        # makes sure it stays inside project_root.
-        try:
-            target.relative_to(self.project_root)
-        except ValueError:
-            raise PermissionError(
-                "Access outside the project directory is not allowed."
-            )
-
-        return target
     
     ## list all files/folders in directory
     def list_directory(self, path: str = ".") -> dict:
         try:
-            target = self._safe_path(path)
+            target = self.project_context.resolve_path(path)
 
             if not target.exists():
                 return {
@@ -62,7 +47,7 @@ class FileSystemTool:
 
             return {
                 "success": True,
-                "path": str(target.relative_to(self.project_root)),
+                "path": str(target.relative_to(self.project_context.get_project_root())),
                 "entries": entries
             }
 
@@ -80,7 +65,7 @@ class FileSystemTool:
     ##  read file
     def read_file(self, path: str) -> dict:
         try:
-            target = self._safe_path(path)
+            target = self.project_context.resolve_path(path)
                         
             if not target.exists():
                 return {
@@ -106,7 +91,7 @@ class FileSystemTool:
 
             return {
                 "success": True,
-                "path": str(target.relative_to(self.project_root)),
+                "path": str(target.relative_to(self.project_context.get_project_root())),
                 "content": content
             }
 
@@ -127,6 +112,7 @@ class FileSystemTool:
                 "success": False,
                 "error": f"Could not read file: {e}"
             }
+        
     ## searchFile
     # Searches for files/dictionaries with specific parameters
     # Query hint  to filename, extension for type of data file, 
@@ -142,10 +128,10 @@ class FileSystemTool:
         try:
             results = []
             # iters through all directories in the current project
-            for path in self.project_root.rglob("*"):
+            for path in self.project_context.get_project_root().rglob("*"):
 
                 relative_parts = path.relative_to(
-                    self.project_root
+                    self.project_context.get_project_root()
                 ).parts
 
                 if any(part in self.ignored_directories
@@ -194,7 +180,7 @@ class FileSystemTool:
 
                 results.append({
                     "path": str(
-                        path.relative_to(self.project_root)
+                        path.relative_to(self.project_context.get_project_root())
                     ),
                     "name": path.name,
                     "extension": path.suffix,

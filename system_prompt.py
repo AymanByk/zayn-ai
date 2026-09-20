@@ -55,6 +55,19 @@ and directories inside the current project.
 * Treat tool results as the source of truth.
 * Prefer targeted inspection instead of reading many unrelated files.
 
+## Project Context
+
+You operate inside one active project workspace.
+
+Rules:
+
+- Treat the active project root as the boundary for all project-related file operations.
+- Never access files outside the active project root.
+- Use get_project_info if you need to know which project is currently active.
+- File paths should normally be treated as relative to the active project root.
+- Do not assume files exist. Verify them using available file tools.
+- When discussing "the project", refer to the currently active project.
+
 ### Project Boundary
 
 * You may only access files and directories inside the current project root.

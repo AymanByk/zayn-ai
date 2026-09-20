@@ -16,6 +16,13 @@ The project is currently under active development and is also used to learn abou
 - Function / tool calling
 - Task-loops
 - Modular separation between assistant logic, LLM communication, memory and tools
+- Read-only file-system access
+- Directory listing
+- File search by name, extension and content
+- Project-scoped file access
+- Path traversal protection
+- File size limits
+- Active project context
 
 ## How It Works
 
@@ -46,26 +53,37 @@ The LLM decides which tool should be used, while the Python application controls
 - [x] Local LLM integration
 - [x] Conversation context
 - [x] Basic persistent memory
+- [x] Long-term memory
+- [x] LLM-controlled memory
 - [x] Calculator tool
+- [x] Time tool
 - [x] Function calling
 - [x] Improve tool routing
 - [x] Support multiple tool calls
 - [x] Integrate additional tools
 - [x] Improve error handling
+- [x] File reading
+- [x] Directory listing
+- [x] File search by name, extension and content
+- [x] Project-scoped file access
+- [x] Project context
+- [x] Path traversal protection
+- [x] File size limits
 
 ### Planned
 
-- [x] LLM-controlled memory
-- [ ] File reading and writing
+- [ ] Multi-file code analysis
+- [ ] File writing and editing
+- [ ] Approval system for file and system modifications
+- [ ] Shell command execution
 - [ ] Code execution
 - [ ] Test execution
-- [ ] Code analysis
-- [ ] Approval system for system modifications
-- [x] Long-term memory
-- [ ] Voice input and output
-- [ ] Desktop or web interface
+- [ ] Execution result analysis
+- [ ] Additional security and stability hardening
 - [ ] Git/GitHub integration
 - [ ] Self-improvement suggestions with human approval
+- [ ] Voice input and output
+- [ ] Desktop or web interface
 
 ## Tech Stack
 
@@ -91,6 +109,7 @@ zayn-ai/
 |   ├── tool_definitions.py
 │   ├── calculator.py
 |   ├── file_system.py
+|   ├── project_context.py
 │   └── time_tool.py
 │
 ├── .env.example
@@ -128,9 +147,19 @@ python main.py
 
 ## Security
 
-Zayn AI is designed so that the LLM does not directly receive unrestricted access to the operating system.
+Zayn AI follows a tool-based permission model. The language model does not directly access the operating system.
 
-Future actions such as modifying files or executing code should be controlled by dedicated tools and require user approval where appropriate.
+Current file-system access is read-only and restricted to the active project root.
+
+Implemented safeguards include:
+
+- Project-root access restrictions
+- Path traversal protection
+- File size limits
+- Ignored directories such as `.git`, `.venv`, `node_modules` and `__pycache__`
+- No file modification or command execution capabilities yet
+
+Future write, delete and shell operations will require dedicated tools and an approval system.
 
 ## Status
 

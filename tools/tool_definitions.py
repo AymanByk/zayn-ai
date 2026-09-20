@@ -216,6 +216,21 @@ class ToolDefinitions:
                 }
             }
         }
+        get_project_info_tool = {
+            "type": "function",
+            "function": {
+                "name": "get_project_info",
+                "description": (
+                    "Returns information about the currently active project, "
+                    "including its name and root directory."
+                ),
+                "parameters": {
+                    "type": "object",
+                    "properties": {},
+                    "required": []
+                }
+            }
+        }
         
         self.tools = [
             calculator_tool,
@@ -227,5 +242,6 @@ class ToolDefinitions:
             list_memories_tool,
             list_directory_tool,
             read_file_tool,
-            search_files_tool 
+            search_files_tool,
+            get_project_info_tool 
         ]

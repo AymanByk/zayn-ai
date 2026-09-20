@@ -8,6 +8,7 @@ from tools.tool_definitions import ToolDefinitions
 from system_prompt import SYSTEM_PROMPT
 from tools.file_system import FileSystemTool
 from pathlib import Path
+from tools.project_context import ProjectContext
 
 class Assistant:
     def __init__(self):
@@ -22,10 +23,11 @@ class Assistant:
         self.calculator = CalculatorTool()
         self.timer = TimeTool()
         self.manager = MemoryManager()
+
         #path is current working directory
-        self.file_system = FileSystemTool(
-            project_root=str(Path.cwd())
-        )
+        self.project_context = ProjectContext(str(Path.cwd()))
+        self.file_system = FileSystemTool(self.project_context)
+
         self.tools= ToolDefinitions().tools
         self.max_tool_iterations= 20
                 
@@ -298,6 +300,9 @@ class Assistant:
                         50
                     )
                 )
+            #GET PROJECT INFO
+            elif name == "get_project_info":
+                return self.project_context.get_project_info()  
 
             # UNKNOWN TOOL
             else:
