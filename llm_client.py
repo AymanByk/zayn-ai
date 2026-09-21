@@ -22,7 +22,10 @@ class LLMClient:
             "model": self.model,
             "messages": messages,
             "tools": tools,
-            "stream": True
+            "stream": True,
+            "options": {
+                "num_ctx": 16384
+            }
         }
 
         try:
@@ -37,6 +40,7 @@ class LLMClient:
 
             full_content = ""
             tool_calls = []
+            full_thinking = ""
 
             for line in response.iter_lines():
 
@@ -73,6 +77,10 @@ class LLMClient:
                     return {
                         "error": "Invalid message format from Ollama."
                     }
+
+                thinking = chunk_message.get("thinking", "")
+                if isinstance(thinking, str):
+                    full_thinking += thinking
 
                 # Normal streamed text
                 content = chunk_message.get("content", "")
@@ -112,6 +120,8 @@ class LLMClient:
             if tool_calls:
                 message["tool_calls"] = tool_calls
 
+            if full_thinking:
+                message["thinking"] = full_thinking
             return message
 
         except requests.exceptions.ConnectionError:

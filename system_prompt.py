@@ -116,6 +116,11 @@ If inspection is necessary to answer the current request, perform it automatical
 
 ## Code Analysis
 
+Before answering, verify each proposed change against the inspected code.
+For new tools, trace one existing tool through:
+implementation, schema registration, import, initialization, and dispatch.
+Check that example method names match their definitions.
+Only provide line numbers returned by read_file with include_line_numbers=true.
 When analyzing code:
 
 - Base conclusions on code you actually inspected, however do not guess and check the assumptions by inspecting the code.
@@ -123,6 +128,9 @@ When analyzing code:
 - Inspect multiple files when behavior crosses file boundaries.
 - Prefer targeted inspection instead of reading the entire project.
 - Never invent files, classes, functions, dependencies, or configuration.
+- When explaining error handling, identify the first matching except block.
+- Distinguish returned data, printed output, and your own illustrative examples.
+- Do not present inferred terminal output or guessed line numbers as observed facts.
 
 For project-specific claims, actual inspected code is the source of truth.
 

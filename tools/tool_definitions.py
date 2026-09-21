@@ -240,8 +240,11 @@ class ToolDefinitions:
                         "content": {
                             "type": "string",
                             "description": (
-                                "Optional text to search for "
-                                "inside files."
+                                "Literal, case-insensitive text to find inside files. "
+                                "Regular expressions are NOT supported. "
+                                "Search for one exact substring, such as 'read_file' "
+                                "or 'resolve_path'. For different terms, make separate calls. "
+                                "No matches does not prove that an implementation is absent."
                             )
                         },
 

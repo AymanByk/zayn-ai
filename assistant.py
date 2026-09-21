@@ -107,17 +107,34 @@ class Assistant:
 
             for tool_call in tool_calls:
 
+                print(
+                    "\n[TOOL]",
+                    tool_call["function"]["name"],
+                    tool_call["function"].get("arguments", {})
+                )
                 result = self.execute_tool(tool_call)
 
                 self.messages.append({
                     "role": "tool",
+                    "tool_name": tool_call["function"]["name"],
                     "content": json.dumps(result)
                 })
 
             tool_iteration += 1
+            reminder = {
+                "role": "system",
+                "content": (
+                    f"The user's current request is: {tmp}\n"
+                    "Continue solving that request. "
+                    "If requested files have not been read, read them now. "
+                    "Follow relevant references before answering. "
+                    "Do not replace the task with a summary of the last tool result. "
+                    "Base project-specific claims only on inspected code."
+                )
+            }
 
             message = self.llm.chat(
-                self.messages,
+                self.messages + [reminder],
                 self.tools
             )
 
