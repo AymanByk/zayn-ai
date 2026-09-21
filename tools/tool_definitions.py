@@ -222,8 +222,11 @@ class ToolDefinitions:
                         "query": {
                             "type": "string",
                             "description": (
-                                "Optional filename search term."
-                            )
+                            "Optional filename filter, not a general search query. "
+                            "All supplied filters must match. "
+                            "For project-wide symbol or reference searches, "
+                            "omit query and use content."
+                        )
                         },
 
                         "extension": {
