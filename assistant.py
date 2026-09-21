@@ -287,19 +287,23 @@ class Assistant:
             # READ_FILE
             elif name == "read_file":
                 return self.file_system.read_file(
-                    arguments["path"]
+                    path=arguments["path"],
+                    include_line_numbers=arguments.get(
+                        "include_line_numbers",False
+                    ),
+                    start_line=arguments.get("start_line"),
+                    end_line=arguments.get("end_line")
                 )
+            
             # SEARCH FILE
             elif name == "search_files":
                 return self.file_system.search_files(
-                    query=arguments.get("query", ""),
+                    query=arguments.get("query",""),
                     extension=arguments.get("extension"),
                     content=arguments.get("content"),
-                    max_results=arguments.get(
-                        "max_results",
-                        50
-                    )
+                    max_results=arguments.get("max_results",50)
                 )
+
             #GET PROJECT INFO
             elif name == "get_project_info":
                 return self.project_context.get_project_info()  

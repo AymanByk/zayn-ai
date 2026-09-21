@@ -156,20 +156,49 @@ class ToolDefinitions:
             "function": {
                 "name": "read_file",
                 "description": (
-                    "Reads the contents of a text file inside the current project. "
-                    "Use this when you need to inspect source code or configuration files."
+                    "Reads a text file inside the active project. "
+                    "Can optionally return a specific line range "
+                    "and include line numbers."
                 ),
                 "parameters": {
                     "type": "object",
                     "properties": {
+
                         "path": {
                             "type": "string",
                             "description": (
-                                "Relative path of the file inside the project."
+                                "Relative path to the file "
+                                "inside the project."
+                            )
+                        },
+
+                        "include_line_numbers": {
+                            "type": "boolean",
+                            "description": (
+                                "Whether line numbers should "
+                                "be included in the returned content."
+                            )
+                        },
+
+                        "start_line": {
+                            "type": "integer",
+                            "description": (
+                                "Optional first line to read. "
+                                "Line numbering starts at 1."
+                            )
+                        },
+
+                        "end_line": {
+                            "type": "integer",
+                            "description": (
+                                "Optional last line to read."
                             )
                         }
                     },
-                    "required": ["path"]
+
+                    "required": [
+                        "path"
+                    ]
                 }
             }
         }
@@ -177,45 +206,55 @@ class ToolDefinitions:
             "type": "function",
             "function": {
                 "name": "search_files",
+
                 "description": (
-                    "Searches files inside the current project. "
-                    "Can search by filename, file extension, "
-                    "or text contained inside files."
+                    "Searches files inside the active project "
+                    "by filename, extension or file content. "
+                    "Content search results include matching "
+                    "line numbers and short previews."
                 ),
+
                 "parameters": {
                     "type": "object",
+
                     "properties": {
+
                         "query": {
                             "type": "string",
                             "description": (
-                                "Optional filename search term. "
-                                "Example: 'memory' finds files whose names contain memory."
+                                "Optional filename search term."
                             )
                         },
+
                         "extension": {
                             "type": "string",
                             "description": (
                                 "Optional file extension filter, "
-                                "for example 'py', '.json' or 'md'."
+                                "for example 'py', '.json' or '.md'."
                             )
                         },
+
                         "content": {
                             "type": "string",
                             "description": (
-                                "Optional text that must appear inside the file."
+                                "Optional text to search for "
+                                "inside files."
                             )
                         },
+
                         "max_results": {
                             "type": "integer",
                             "description": (
-                                "Maximum number of matching files to return."
+                                "Maximum number of matching files "
+                                "to return. Maximum allowed value is 100."
                             )
                         }
                     },
+
                     "required": []
                 }
             }
-        }
+        }   
         get_project_info_tool = {
             "type": "function",
             "function": {

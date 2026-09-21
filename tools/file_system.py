@@ -62,8 +62,16 @@ class FileSystemTool:
                 "success": False,
                 "error": f"Could not list directory: {e}"
             }
-    ##  read file
-    def read_file(self, path: str) -> dict:
+    #  read file
+    ## select specific lines of numbers, 
+    ## or include line numbers 
+    def read_file(self,
+        path: str,
+        include_line_numbers: bool = False,
+        start_line: int | None = None,
+        end_line: int | None = None
+    ) -> dict:
+
         try:
             target = self.project_context.resolve_path(path)
                         
@@ -79,20 +87,91 @@ class FileSystemTool:
                     "error": "Path is not a file."
                 }
 
-            if target.stat().st_size > self.max_file_size:
+            file_size = target.stat().st_size
+
+            if file_size > self.max_file_size:
                 return {
                     "success": False,
-                    "error": "File is too large."
+                    "error": (
+                        f"File is too large. "
+                        f"Maximum allowed size is {self.max_file_size} bytes."
+                    )
                 }
 
             content = target.read_text(
                 encoding="utf-8"
             )
 
+            lines = content.splitlines()
+
+            total_lines = len(lines)
+
+            # validate line range
+            if start_line is not None and start_line < 1:
+                return {
+                    "success": False,
+                    "error": "start_line must be at least 1."
+                }
+
+            if end_line is not None and end_line < 1:
+                return {
+                    "success": False,
+                    "error": "end_line must be at least 1."
+                }
+
+            if (start_line is not None
+                and end_line is not None
+                and start_line > end_line
+            ):
+                return {
+                    "success": False,
+                    "error": "start_line cannot be greater than end_line."
+                }
+
+            # convert to python indexes
+            start_index = (
+                start_line - 1
+                if start_line is not None
+                else 0
+            )
+
+            end_index = (
+                end_line
+                if end_line is not None
+                else total_lines
+            )
+
+            selected_lines = lines[start_index:end_index]
+
+            if include_line_numbers:
+                selected_content = "\n".join(
+                    f"{index}: {line}"
+                    for index, line in enumerate(
+                        selected_lines,
+                        start=start_index + 1
+                    )
+                )
+            else:
+                selected_content = "\n".join(
+                    selected_lines
+                )
+
+            relative_path = str(
+                target.relative_to(
+                    self.project_context.get_project_root()
+                )
+            )
+
             return {
                 "success": True,
-                "path": str(target.relative_to(self.project_context.get_project_root())),
-                "content": content
+                "path": relative_path,
+                "name": target.name,
+                "extension": target.suffix,
+                "size": file_size,
+                "line_count": total_lines,
+                "start_line": start_index + 1,
+                "end_line": min(end_index,total_lines),
+                "content": selected_content
             }
 
         except UnicodeDecodeError:
@@ -105,6 +184,12 @@ class FileSystemTool:
             return {
                 "success": False,
                 "error": str(e)
+            }
+
+        except OSError as e:
+            return {
+                "success": False,
+                "error": f"Operating system error: {e}"
             }
 
         except Exception as e:
@@ -126,51 +211,89 @@ class FileSystemTool:
     ) -> dict:
 
         try:
+
+            if max_results < 1:
+                return {
+                    "success": False,
+                    "error": "max_results must be at least 1."
+                }
+
+            # protect against unnecessarily huge results
+            max_results = min(max_results,100)
             results = []
-            # iters through all directories in the current project
-            for path in self.project_context.get_project_root().rglob("*"):
 
-                relative_parts = path.relative_to(
-                    self.project_context.get_project_root()
-                ).parts
+            project_root = (
+                self.project_context.get_project_root()
+            )
+            normalized_extension = None
 
-                if any(part in self.ignored_directories
-                    for part in relative_parts):
+            # Format the datatypes/extension
+            if extension:
+                normalized_extension = (
+                    extension.lower().strip()
+                )
+
+                if not normalized_extension.startswith("."):
+                    normalized_extension = (
+                        "." + normalized_extension
+                    )
+
+            normalized_query = query.lower().strip()
+
+            # Normalize content search term
+            normalized_content = (
+                content.lower()
+                if content
+                else None
+            )
+
+            # Recursively iterates through all files and directories
+            # inside the active project
+            for path in project_root.rglob("*"):
+                #absolute to relative
+                try:
+                    relative_path = path.relative_to(
+                        project_root
+                    )
+
+                except ValueError:
                     continue
 
-
+                # ignore unwanted directories
+                if any(
+                    part in self.ignored_directories
+                    for part in relative_path.parts
+                ):
+                    continue
 
                 if not path.is_file():
                     continue
 
                 # extension filter
-                if extension:
-                    normalized_extension = extension.lower()
-
-                    if not normalized_extension.startswith("."):
-                        normalized_extension = "." + normalized_extension
-
-                    if path.suffix.lower() != normalized_extension:
+                if normalized_extension:
+                    if (path.suffix.lower() !=
+                        normalized_extension):
                         continue
 
-                # filename search
-                if query:
-                    if query.lower() not in path.name.lower():
+                # Filter files by filename 
+                # if query provided
+                if normalized_query:
+                    if (normalized_query not in
+                        path.name.lower()):
                         continue
+                
+                file_size = path.stat().st_size
+                content_matches = []
 
                 # optional content search
-                if content:
+                if normalized_content:
+                    if file_size > self.max_file_size:
+                        continue
+
                     try:
-                        if path.stat().st_size > self.max_file_size:
-                            continue
+                        text = path.read_text(encoding="utf-8")
 
-                        text = path.read_text(
-                            encoding="utf-8"
-                        )
-
-                        if content.lower() not in text.lower():
-                            continue
-
+                    # Skip binary, inaccessible or unreadable files
                     except (
                         UnicodeDecodeError,
                         PermissionError,
@@ -178,13 +301,33 @@ class FileSystemTool:
                     ):
                         continue
 
+                    lines = text.splitlines()
+
+                    # Search each line for the requested content
+                    for line_number, line in enumerate(
+                        lines,
+                        start=1
+                    ):
+                        if (normalized_content
+                            in line.lower()):
+                            content_matches.append({
+                                "line": line_number,
+                                "preview": line.strip()[:200]
+                            })
+
+                            # avoid enormous match lists
+                            if len(content_matches) >= 10:
+                                break
+
+                    if not content_matches:
+                        continue
+
                 results.append({
-                    "path": str(
-                        path.relative_to(self.project_context.get_project_root())
-                    ),
+                    "path": str(relative_path),
                     "name": path.name,
                     "extension": path.suffix,
-                    "size": path.stat().st_size
+                    "size": file_size,
+                    "matches": content_matches
                 })
 
                 if len(results) >= max_results:
@@ -192,11 +335,24 @@ class FileSystemTool:
 
             return {
                 "success": True,
-                "query": query, 
-                "extension": extension,
+                "query": query,
+                "extension": normalized_extension,
                 "content": content,
                 "results": results,
-                "count": len(results)
+                "count": len(results),
+                "max_results": max_results
+            }
+
+        except PermissionError as e:
+            return {
+                "success": False,
+                "error": str(e)
+            }
+
+        except OSError as e:
+            return {
+                "success": False,
+                "error": f"Operating system error: {e}"
             }
 
         except Exception as e:
