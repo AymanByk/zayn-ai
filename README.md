@@ -130,7 +130,7 @@ Requirements:
 Install the model:
 
 ```bash
-ollama pull qwen3:8b
+ollama pull qwen3.5:9b
 ```
 
 Install Python dependencies:
