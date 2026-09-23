@@ -1,6 +1,8 @@
 from tools.project_context import ProjectContext
-
-
+from typing import Optional
+from pathlib import Path
+import base64
+import binascii
 class FileSystemTool:
 
     def __init__(self, project_context: ProjectContext):
@@ -359,4 +361,72 @@ class FileSystemTool:
             return {
                 "success": False,
                 "error": f"Could not search files: {e}"
+            }
+
+    def create_file(
+        self,
+        path: str,
+        content: str = "",
+        encoding: str = "utf-8"
+    ) -> dict:
+        try:
+            # Validate path
+            if not isinstance(path, str) or not path.strip() or Path(path).is_absolute():
+                return {"success": False, "error": "Use a relative project path."}
+
+            # Validate content
+            if not isinstance(content, str):
+                return {"success": False, "error": "Content must be a string."}
+            # Validate encoding
+            if encoding == "utf-8":
+                data = content.encode("utf-8")
+            elif encoding == "base64":
+                data = base64.b64decode(content, validate=True)
+            else:
+                return {"success": False, "error": "Unsupported encoding."}
+
+            # data limit
+            if len(data) > 5 * 1024 * 1024:
+                return {"success": False, "error": "File exceeds the 5 MB limit."}
+
+            target = self.project_context.resolve_path(path)
+            relative = target.relative_to(
+                self.project_context.get_project_root()
+            )
+
+            if not relative.parts or any(
+                part in self.ignored_directories for part in relative.parts
+            ):
+                return {
+                    "success": False,
+                    "error": "This project path is not writable."
+                }
+
+            # wrong directory
+            if not target.parent.is_dir():
+                return {
+                    "success": False,
+                    "error": "Parent directory does not exist."
+                }
+
+            # "x" creates new file or binary file.
+            with target.open("xb") as file:
+                file.write(data)
+
+            return {
+                "success": True,
+                "path": str(relative),
+                "size": len(data)
+            }
+
+        except (ValueError, binascii.Error):
+            return {"success": False, "error": "Invalid Base64 content."}
+        except FileExistsError:
+            return {"success": False, "error": "File already exists."}
+        except PermissionError as error:
+            return {"success": False, "error": str(error)}
+        except OSError as error:
+            return {
+                "success": False,
+                "error": f"Could not create file: {error}"
             }

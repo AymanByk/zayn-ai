@@ -276,6 +276,40 @@ class ToolDefinitions:
                 }
             }
         }
+        create_file_tool = {
+            "type": "function",
+            "function": {
+                "name": "create_file",
+                "description": (
+                    "Creates a new file inside the active project after user approval. "
+                    "Never overwrites existing files. "
+                    "For ordinary text use utf-8; for binary bytes use base64."
+                ),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "path": {
+                            "type": "string",
+                            "description": "Relative path inside the project."
+                        },
+                        "content": {
+                            "type": "string",
+                            "description": (
+                                "Optional content. Omit to create an empty file."
+                            )
+                        },
+                        "encoding": {
+                            "type": "string",
+                            "enum": ["utf-8", "base64"],
+                            "description": (
+                                "How content is supplied. Defaults to utf-8."
+                            )
+                        }
+                    },
+                    "required": ["path"]
+                }
+            }
+        }
         
         self.tools = [
             calculator_tool,
@@ -288,5 +322,6 @@ class ToolDefinitions:
             list_directory_tool,
             read_file_tool,
             search_files_tool,
-            get_project_info_tool 
+            get_project_info_tool,
+            create_file_tool
         ]

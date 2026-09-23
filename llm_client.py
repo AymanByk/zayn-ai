@@ -105,12 +105,6 @@ class LLMClient:
             if full_content:
                 print()
 
-            
-            if not full_content and not tool_calls:
-                return {
-                    "error": "Ollama returned an empty response."
-                }
-
             # message can contain strings AND lists
             message: dict[str, Any] = {
                 "role": "assistant",

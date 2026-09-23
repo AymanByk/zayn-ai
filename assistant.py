@@ -1,14 +1,18 @@
-import json
-
-from memory_manager import MemoryManager
+from tools.tool_definitions import ToolDefinitions
+from tools.project_context import ProjectContext
+from tools.file_system import FileSystemTool
 from tools.calculator import CalculatorTool
+from memory_manager import MemoryManager
+from system_prompt import SYSTEM_PROMPT
 from tools.time_tool import TimeTool
 from llm_client import LLMClient
-from tools.tool_definitions import ToolDefinitions
-from system_prompt import SYSTEM_PROMPT
-from tools.file_system import FileSystemTool
 from pathlib import Path
-from tools.project_context import ProjectContext
+import binascii
+import hashlib
+import base64
+import json
+import sys
+import os
 
 class Assistant:
     def __init__(self):
@@ -325,6 +329,92 @@ class Assistant:
             elif name == "get_project_info":
                 return self.project_context.get_project_info()  
 
+            # CREATE FILE
+            elif name == "create_file":
+                path = arguments.get("path")
+                content = arguments.get("content", "")
+                encoding = arguments.get("encoding", "utf-8")
+
+                # validate path
+                if not isinstance(path, str) or not path.strip() or Path(path).is_absolute():
+                    return {
+                        "success": False,
+                        "error": "Use a relative project path."
+                    }
+                 # validate content
+                if not isinstance(content, str):
+                    return {
+                        "success": False,
+                        "error": "Content must be a string."
+                    }
+                
+                # validate encoding
+                if encoding not in ("utf-8", "base64"):
+                    return {
+                        "success": False,
+                        "error": "Unsupported encoding."
+                    }
+
+                try:
+                    if encoding == "utf-8":
+                        data = content.encode("utf-8")
+                    else:
+                        data = base64.b64decode(content, validate=True)
+                except (UnicodeError, ValueError, binascii.Error):
+                    return {
+                        "success": False,
+                        "error": "Invalid file content."
+                    }
+
+                # data limit
+                if len(data) > 5 * 1024 * 1024:
+                    return {
+                        "success": False,
+                        "error": "File exceeds the 5 MB limit."
+                    }
+
+                target = self.project_context.resolve_path(path)
+                relative = target.relative_to(
+                    self.project_context.get_project_root()
+                )
+
+                if not relative.parts or any(
+                    part in self.file_system.ignored_directories
+                    for part in relative.parts
+                ):
+                    return {
+                        "success": False,
+                        "error": "This project path is not writable."
+                    }
+
+                # File already exists
+                if target.exists():
+                    return {
+                        "success": False,
+                        "error": "File already exists."
+                    }
+                # wrong directory
+                if not target.parent.is_dir():
+                    return {
+                        "success": False,
+                        "error": "Parent directory does not exist."
+                    }
+
+                # User's appoval
+                if not self.approve_file_creation(
+                    str(relative), content, encoding, data
+                ):
+                    return {
+                        "success": False,
+                        "error": "Cancelled by user."
+                    }
+
+                return self.file_system.create_file(
+                    str(relative),
+                    content,
+                    encoding
+                )
+            
             # UNKNOWN TOOL
             else:
                 return {
@@ -342,4 +432,65 @@ class Assistant:
                 "success": False,
                 "error": f"Tool execution failed: {e}"
             }
-            
+        
+    def approve_file_creation(
+        self,
+        path: str,
+        content: str,
+        encoding: str,
+        data: bytes
+    ) -> bool:
+        
+        print("Create file?  [y/N]: ", end="", flush=True)
+        buffer = []
+
+        while True:
+            char = self.get_char()
+
+            if char == "\x1b":  # Escape
+                print()
+                return False
+
+            if char in ("\r", "\n"):
+                answer = "".join(buffer).strip().lower()
+                print()
+
+                if answer in ("yes", "y"):
+                    return True
+                if answer in ("", "no", "n"):
+                    return False
+
+                print("Type yes to create or no to cancel: ", end="", flush=True)
+                buffer.clear()
+
+            elif char in ("\x08", "\x7f"):  # Backspace
+                if buffer:
+                    buffer.pop()
+                    sys.stdout.write("\b \b")
+                    sys.stdout.flush()
+
+            elif char.isprintable():
+                buffer.append(char)
+                sys.stdout.write(char)
+                sys.stdout.flush()
+
+    #get key input        
+    def get_char(self) -> str:
+        if os.name == 'nt':  # Windows
+            import msvcrt
+            ch = msvcrt.getch()
+            if ch in (b'\x00', b'\xe0'):  # Special key prefix (e.g., arrow keys)
+                msvcrt.getch()
+                return ''
+            return ch.decode('utf-8', errors='ignore')
+        else:  # Unix / Linux / macOS
+            import tty
+            import termios
+            fd = sys.stdin.fileno()
+            old_settings = termios.tcgetattr(fd)
+            try:
+                tty.setraw(fd)
+                ch = sys.stdin.read(1)
+            finally:
+                termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+            return ch
