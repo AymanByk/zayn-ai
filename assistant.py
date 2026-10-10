@@ -414,6 +414,80 @@ class Assistant:
                     content,
                     encoding
                 )
+            elif name == "replace_text":
+                path = arguments.get("path")
+                old_text = arguments.get("old_text")
+                new_text = arguments.get("new_text")
+                # validating parameters
+                if not isinstance(path, str) or not path.strip() or Path(path).is_absolute():
+                    return {
+                        "success": False,
+                        "error": "Use a relative project path."
+                    }
+                if not isinstance(old_text, str) or not old_text:
+                    return {
+                        "success": False,
+                        "error": "old_text must be non-empty."
+                    }
+                if not isinstance(new_text, str):
+                    return {
+                        "success": False,
+                        "error": "new_text must be a string."
+                    }
+
+                # relative path creation & validation
+                target = self.project_context.resolve_path(path)
+                relative = target.relative_to(
+                    self.project_context.get_project_root()
+                )
+
+                if any(
+                    part in self.file_system.ignored_directories
+                    for part in relative.parts
+                ):
+                    return {
+                        "success": False,
+                        "error": "This project path is not writable."
+                    }
+
+                if not target.is_file():
+                    return {
+                        "success": False,
+                        "error": "File does not exist."
+                    }
+
+                if target.stat().st_size > self.file_system.max_file_size:
+                    return {
+                        "success": False,
+                        "error": "File is too large."
+                    }
+
+                with target.open("r", encoding="utf-8", newline="") as file:
+                    original = file.read()
+
+                matches = original.count(old_text)
+
+                if matches != 1:
+                    return {
+                        "success": False,
+                        "error": f"Expected exactly one match, found {matches}."
+                    }
+                
+                # USER approval
+                if not self.approve_text_replacement(
+                    str(relative), old_text, new_text
+                ):
+                    return {
+                        "success": False,
+                        "error": "Cancelled by user."
+                    }
+
+                return self.file_system.replace_text(
+                    path=str(relative),
+                    old_text=old_text,
+                    new_text=new_text,
+                    expected_content=original
+                )
             
             # UNKNOWN TOOL
             else:
@@ -432,6 +506,21 @@ class Assistant:
                 "success": False,
                 "error": f"Tool execution failed: {e}"
             }
+
+    def approve_text_replacement(
+        self,
+        path: str,
+        old_text: str,
+        new_text: str
+    ) -> bool:
+        print(f"\nZayn wants to edit: {path}")
+        print("Old text:")
+        print(old_text)
+        print("New text:")
+        print(new_text if new_text else "(remove old text)")
+
+        answer = input("Apply this change? Type yes [y/N]: ")
+        return answer.strip().lower() in ("yes", "y")
         
     def approve_file_creation(
         self,

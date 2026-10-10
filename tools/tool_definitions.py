@@ -310,6 +310,35 @@ class ToolDefinitions:
                 }
             }
         }
+        replace_text_tool = {
+            "type": "function",
+            "function": {
+                "name": "replace_text",
+                "description": (
+                    "Replaces one exact text occurrence in an existing UTF-8 file "
+                    "after user approval. Read the file first. "
+                    "The old text must occur exactly once."
+                ),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "path": {
+                            "type": "string",
+                            "description": "Relative file path inside the project."
+                        },
+                        "old_text": {
+                            "type": "string",
+                            "description": "Exact existing text to replace. Must not be empty."
+                        },
+                        "new_text": {
+                            "type": "string",
+                            "description": "Replacement text. May be empty to remove old_text."
+                        }
+                    },
+                    "required": ["path", "old_text", "new_text"]
+                }
+            }
+        }
         
         self.tools = [
             calculator_tool,
@@ -323,5 +352,6 @@ class ToolDefinitions:
             read_file_tool,
             search_files_tool,
             get_project_info_tool,
-            create_file_tool
+            create_file_tool,
+            replace_text_tool
         ]

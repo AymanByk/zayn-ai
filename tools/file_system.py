@@ -430,3 +430,86 @@ class FileSystemTool:
                 "success": False,
                 "error": f"Could not create file: {error}"
             }
+    def replace_text(
+        self,
+        path: str,
+        old_text: str,
+        new_text: str,
+        expected_content: str
+    ) -> dict:
+        try:
+            # validating parameters
+            if not isinstance(old_text, str) or not old_text:
+                return {
+                    "success": False,
+                    "error": "old_text must be non-empty."
+                }
+
+            if not isinstance(new_text, str):
+                return {
+                    "success": False,
+                    "error": "new_text must be a string."
+                }
+
+            target = self.project_context.resolve_path(path)
+
+            # target ist not a file
+            if not target.is_file():
+                return {
+                    "success": False,
+                    "error": "File does not exist."
+                }
+
+            if target.stat().st_size > self.max_file_size:
+                return {
+                    "success": False,
+                    "error": "File is too large."
+                }
+
+            # searches for matching lines
+            with target.open("r", encoding="utf-8", newline="") as file:
+                original = file.read()
+
+            if original != expected_content:
+                return {
+                    "success": False,
+                    "error": "File changed since approval. Read it again."
+                }
+            matches = original.count(old_text)
+            
+            # more than 1 occurence
+            if matches != 1:
+                return {
+                    "success": False,
+                    "error": f"Expected exactly one match, found {matches}."
+                }
+
+            # replace one occurence
+            updated = original.replace(old_text, new_text, 1)
+
+            if len(updated.encode("utf-8")) > self.max_file_size:
+                return {
+                    "success": False,
+                    "error": "Updated file is too large."
+                }
+         
+            # replace content
+            with target.open("w", encoding="utf-8", newline="") as file:
+                file.write(updated)
+
+            return {
+                "success": True,
+                "path": str(target.relative_to(
+                    self.project_context.get_project_root()
+                ))
+            }
+
+        except UnicodeDecodeError:
+            return {
+                "success": False,
+                "error": "File is not UTF-8 text."
+            }
+        except PermissionError as error:
+            return {"success": False, "error": str(error)}
+        except OSError as error:
+            return {"success": False, "error": str(error)}
