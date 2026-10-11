@@ -1,8 +1,11 @@
 from tools.project_context import ProjectContext
 from typing import Optional
 from pathlib import Path
-import base64
 import binascii
+import tempfile
+import shutil
+import base64
+import os
 class FileSystemTool:
 
     def __init__(self, project_context: ProjectContext):
@@ -494,8 +497,11 @@ class FileSystemTool:
                 }
          
             # replace content
-            with target.open("w", encoding="utf-8", newline="") as file:
-                file.write(updated)
+            self._write_text_atomic(
+                target,
+                updated,
+                expected_content
+            )
 
             return {
                 "success": True,
@@ -513,3 +519,44 @@ class FileSystemTool:
             return {"success": False, "error": str(error)}
         except OSError as error:
             return {"success": False, "error": str(error)}
+
+    def _write_text_atomic(
+        self,
+        target: Path,
+        content: str,
+        expected_content: str
+    ) -> None:
+
+        temp_path = None
+        try:
+            # create Temp file in same dir.
+            with tempfile.NamedTemporaryFile(
+                mode="w",
+                encoding="utf-8",
+                newline="",
+                dir=target.parent,
+                prefix=".zayn_",
+                suffix=".tmp",
+                delete=False
+            ) as temp_file:
+                temp_path = Path(temp_file.name)
+                temp_file.write(content)
+
+            # check current result before replacing.
+            with target.open("r", encoding="utf-8", newline="") as file:
+                if file.read() != expected_content:
+                    raise OSError(
+                        "File changed since approval. Read it again."
+                    )
+
+            # authorization.
+            shutil.copymode(target, temp_path)
+
+            # replace the completed file.
+            os.replace(temp_path, target)
+
+        finally:
+            # if error -> delet TempFile
+            if temp_path is not None and temp_path.exists():
+                temp_path.chmod(0o600)
+                temp_path.unlink()
