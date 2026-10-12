@@ -108,23 +108,47 @@ class Assistant:
                 return True
 
             tool_calls = message["tool_calls"]
+            cancelled = False
 
             for tool_call in tool_calls:
+                function = tool_call["function"]
 
-                print(
-                    "\n[TOOL]",
-                    tool_call["function"]["name"],
-                    tool_call["function"].get("arguments", {})
-                )
-                result = self.execute_tool(tool_call)
+                if cancelled:
+                    # skip tasks if cancelled
+                    result = {
+                        "success": False,
+                        "cancelled": True,
+                        "error": "Skipped because the user cancelled this round."
+                    }
+                else:
+                    print(
+                        "\n[TOOL]",
+                        function["name"],
+                        function.get("arguments", {})
+                    )
+
+                    result = self.execute_tool(tool_call)
+
+                    if result.get("cancelled"):
+                        cancelled = True
 
                 self.messages.append({
                     "role": "tool",
-                    "tool_name": tool_call["function"]["name"],
+                    "tool_name": function["name"],
                     "content": json.dumps(result)
                 })
 
+            if cancelled:
+                answer = "Cancelled. Changes have been dismissed."
+
+                self.messages.append({
+                    "role": "assistant",
+                    "content": answer
+                })
+
             tool_iteration += 1
+
+            #Reminding about the actual task
             reminder = {
                 "role": "system",
                 "content": (
@@ -406,6 +430,7 @@ class Assistant:
                 ):
                     return {
                         "success": False,
+                        "cancelled": True,
                         "error": "Cancelled by user."
                     }
 
@@ -414,6 +439,8 @@ class Assistant:
                     content,
                     encoding
                 )
+            
+            # REPLACE TEXT
             elif name == "replace_text":
                 path = arguments.get("path")
                 old_text = arguments.get("old_text")
@@ -479,6 +506,7 @@ class Assistant:
                 ):
                     return {
                         "success": False,
+                        "cancelled": True,
                         "error": "Cancelled by user."
                     }
 

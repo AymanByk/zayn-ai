@@ -69,12 +69,12 @@ The LLM decides which tool should be used, while the Python application controls
 - [x] Project context
 - [x] Path traversal protection
 - [x] File size limits
+- [x] File writing and editing
+- [x] Multi-file code analysis
+- [x] Approval system for file and system modifications
 
 ### Planned
 
-- [ ] Multi-file code analysis
-- [ ] File writing and editing
-- [ ] Approval system for file and system modifications
 - [ ] Shell command execution
 - [ ] Code execution
 - [ ] Test execution
