@@ -1,6 +1,7 @@
 from tools.tool_definitions import ToolDefinitions
 from tools.project_context import ProjectContext
 from tools.file_system import FileSystemTool
+from approval_manager import ApprovalManager
 from tools.calculator import CalculatorTool
 from memory_manager import MemoryManager
 from system_prompt import SYSTEM_PROMPT
@@ -8,11 +9,8 @@ from tools.time_tool import TimeTool
 from llm_client import LLMClient
 from pathlib import Path
 import binascii
-import hashlib
 import base64
 import json
-import sys
-import os
 
 class Assistant:
     def __init__(self):
@@ -27,6 +25,7 @@ class Assistant:
         self.calculator = CalculatorTool()
         self.timer = TimeTool()
         self.manager = MemoryManager()
+        self.approval_manager = ApprovalManager()
 
         #path is current working directory
         self.project_context = ProjectContext(str(Path.cwd()))
@@ -138,17 +137,39 @@ class Assistant:
                     "content": json.dumps(result)
                 })
 
+            
             if cancelled:
-                answer = "Cancelled. Changes have been dismissed."
+                # Give the LLM a final response without tool access
+                final_instruction = {
+                    "role": "system",
+                    "content": (
+                        "The user rejected a tool operation. "
+                        "The rejected operation was not executed. "
+                        "Remaining tool calls in this round were skipped. "
+                        "Respect the user's decision. "
+                        "Do not claim that the rejected changes were made. "
+                        "Explain the outcome based on the actual tool results. "
+                        "Respond naturally to the user."
+                    )
+                }
 
-                self.messages.append({
-                    "role": "assistant",
-                    "content": answer
-                })
+                final_message = self.llm.chat(
+                    self.messages + [final_instruction],
+                    []
+                )
+
+                if "error" in final_message:
+                    print(f"\nZayn error: {final_message['error']}")
+                    return True
+
+                self.messages.append(final_message)
+
+                return True
+
 
             tool_iteration += 1
 
-            #Reminding about the actual task
+            # Reminding about the actual task
             reminder = {
                 "role": "system",
                 "content": (
@@ -425,7 +446,7 @@ class Assistant:
                     }
 
                 # User's appoval
-                if not self.approve_file_creation(
+                if not self.approval_manager.file_creation(
                     str(relative), content, encoding, data
                 ):
                     return {
@@ -501,7 +522,7 @@ class Assistant:
                     }
                 
                 # USER approval
-                if not self.approve_text_replacement(
+                if not self.approval_manager.text_replacement(
                     str(relative), old_text, new_text
                 ):
                     return {
@@ -534,80 +555,3 @@ class Assistant:
                 "success": False,
                 "error": f"Tool execution failed: {e}"
             }
-
-    def approve_text_replacement(
-        self,
-        path: str,
-        old_text: str,
-        new_text: str
-    ) -> bool:
-        print(f"\nZayn wants to edit: {path}")
-        print("Old text:")
-        print(old_text)
-        print("New text:")
-        print(new_text if new_text else "(remove old text)")
-
-        answer = input("Apply this change? Type yes [y/N]: ")
-        return answer.strip().lower() in ("yes", "y")
-        
-    def approve_file_creation(
-        self,
-        path: str,
-        content: str,
-        encoding: str,
-        data: bytes
-    ) -> bool:
-        
-        print("Create file?  [y/N]: ", end="", flush=True)
-        buffer = []
-
-        while True:
-            char = self.get_char()
-
-            if char == "\x1b":  # Escape
-                print()
-                return False
-
-            if char in ("\r", "\n"):
-                answer = "".join(buffer).strip().lower()
-                print()
-
-                if answer in ("yes", "y"):
-                    return True
-                if answer in ("", "no", "n"):
-                    return False
-
-                print("Type yes to create or no to cancel: ", end="", flush=True)
-                buffer.clear()
-
-            elif char in ("\x08", "\x7f"):  # Backspace
-                if buffer:
-                    buffer.pop()
-                    sys.stdout.write("\b \b")
-                    sys.stdout.flush()
-
-            elif char.isprintable():
-                buffer.append(char)
-                sys.stdout.write(char)
-                sys.stdout.flush()
-
-    #get key input        
-    def get_char(self) -> str:
-        if os.name == 'nt':  # Windows
-            import msvcrt
-            ch = msvcrt.getch()
-            if ch in (b'\x00', b'\xe0'):  # Special key prefix (e.g., arrow keys)
-                msvcrt.getch()
-                return ''
-            return ch.decode('utf-8', errors='ignore')
-        else:  # Unix / Linux / macOS
-            import tty
-            import termios
-            fd = sys.stdin.fileno()
-            old_settings = termios.tcgetattr(fd)
-            try:
-                tty.setraw(fd)
-                ch = sys.stdin.read(1)
-            finally:
-                termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
-            return ch

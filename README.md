@@ -100,6 +100,7 @@ The LLM decides which tool should be used, while the Python application controls
 zayn-ai/
 ├── main.py
 ├── assistant.py
+├── approval_manager.py
 ├── llm_client.py
 ├── memory_manager.py
 ├── system_prompt.py

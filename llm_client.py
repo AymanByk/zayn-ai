@@ -21,7 +21,7 @@ class LLMClient:
         data = {
             "model": self.model,
             "messages": messages,
-            "tools": tools,
+            "tools": tools if tools != None else [],
             "stream": True,
             "options": {
                 "num_ctx": 16384
