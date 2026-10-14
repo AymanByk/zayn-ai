@@ -339,6 +339,27 @@ class ToolDefinitions:
                 }
             }
         }
+        delete_file_tool = {
+            "type": "function",
+            "function": {
+                "name": "delete_file",
+                "description": (
+                    "Permanently deletes one existing project file after user approval. "
+                    "Use only when the user requests deletion. "
+                    "Does not delete directories or symbolic links."
+                ),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "path": {
+                            "type": "string",
+                            "description": "Exact relative path to the file."
+                        }
+                    },
+                    "required": ["path"]
+                }
+            }
+        }
         
         self.tools = [
             calculator_tool,
@@ -353,5 +374,6 @@ class ToolDefinitions:
             search_files_tool,
             get_project_info_tool,
             create_file_tool,
-            replace_text_tool
+            replace_text_tool,
+            delete_file_tool
         ]

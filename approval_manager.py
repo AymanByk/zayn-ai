@@ -91,3 +91,10 @@ class ApprovalManager:
             finally:
                 termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
             return ch
+
+    def file_deletion(self, path: str, size: int) -> bool:
+        print(f"\nZayn wants to delete: {path}")
+        print(f"Size: {size} bytes")
+        print("This permanently deletes the file. It does not use the recycle bin.")
+
+        return self.request_approval("Delete this file?")

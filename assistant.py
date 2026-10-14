@@ -370,7 +370,7 @@ class Assistant:
                     max_results=arguments.get("max_results",50)
                 )
 
-            #GET PROJECT INFO
+            # GET PROJECT INFO
             elif name == "get_project_info":
                 return self.project_context.get_project_info()  
 
@@ -536,6 +536,68 @@ class Assistant:
                     old_text=old_text,
                     new_text=new_text,
                     expected_content=original
+                )
+
+            # DELETE FILE
+            elif name == "delete_file":
+                path = arguments.get("path")
+
+                # validate path
+                if not isinstance(path, str) or not path.strip() or Path(path).is_absolute():
+                    return {
+                        "success": False,
+                        "error": "Use a relative project path."
+                    }
+
+                root = self.project_context.get_project_root()
+
+                if (root / path).is_symlink():
+                    return {
+                        "success": False,
+                        "error": "Deleting symbolic links is not supported."
+                    }
+
+                target = self.project_context.resolve_path(path)
+                relative = target.relative_to(root)
+
+                if any(
+                    part in self.file_system.ignored_directories
+                    for part in relative.parts
+                ):
+                    return {
+                        "success": False,
+                        "error": "This project path is protected."
+                    }
+
+                if not target.is_file():
+                    return {
+                        "success": False,
+                        "error": "Path is not an existing file."
+                    }
+
+                # Save infos before approval.
+                info = target.stat()
+                expected_state = (
+                    info.st_dev,
+                    info.st_ino,
+                    info.st_size,
+                    info.st_mtime_ns,
+                    info.st_ctime_ns
+                )
+
+                # USER approval
+                if not self.approval_manager.file_deletion(
+                    str(target), info.st_size
+                ):
+                    return {
+                        "success": False,
+                        "cancelled": True,
+                        "error": "Cancelled by user."
+                    }
+
+                return self.file_system.delete_file(
+                    path=str(relative),
+                    expected_state=expected_state
                 )
             
             # UNKNOWN TOOL

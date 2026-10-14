@@ -547,6 +547,71 @@ class FileSystemTool:
                 "error": str(error)
             }
 
+    def delete_file(self, path: str, expected_state: tuple) -> dict:
+        try:
+            if not isinstance(path, str) or not path.strip() or Path(path).is_absolute():
+                return {
+                    "success": False,
+                    "error": "Use a relative project path."
+                }
+
+            root = self.project_context.get_project_root()
+
+            # symbolic links protection
+            if (root / path).is_symlink():
+                return {
+                    "success": False,
+                    "error": "Deleting symbolic links is not supported."
+                }
+
+            target = self.project_context.resolve_path(path)
+            relative = target.relative_to(root)
+
+            if any(
+                part in self.ignored_directories
+                for part in relative.parts
+            ):
+                return {
+                    "success": False,
+                    "error": "This project path is protected."
+                }
+
+            if not target.is_file():
+                return {
+                    "success": False,
+                    "error": "Path is not an existing file."
+                }
+
+            # File same version before deletion?
+            # Prüfen, ob noch dieselbe Dateiversion vorliegt.
+            info = target.stat()
+            current_state = (
+                info.st_dev,
+                info.st_ino,
+                info.st_size,
+                info.st_mtime_ns,
+                info.st_ctime_ns
+            )
+
+            if current_state != expected_state:
+                return {
+                    "success": False,
+                    "error": "File changed since approval. Try again."
+                }
+
+            target.unlink()
+
+            return {
+                "success": True,
+                "path": str(relative)
+            }
+
+        except OSError as error:
+            return {
+                "success": False,
+                "error": str(error)
+            }
+    
     def _write_text_atomic(
         self,
         target: Path,

@@ -134,6 +134,16 @@ If inspection is necessary to answer the current request, perform it automatical
 - If the operation is rejected or fails, report that outcome.
 - Claim success only when the tool returns success.
 
+## File Deletion
+
+- Use delete_file only when the user requests deletion.
+- Identify the exact file; if the target is ambiguous, clarify first.
+- The application asks for confirmation before deleting.
+- Deletion is permanent and does not use the recycle bin.
+- Do not delete directories or symbolic links.
+- Respect rejection and do not retry without a new user request.
+- Claim deletion only after the tool returns success.
+
 ## Code Analysis
 
 Before answering, verify each proposed change against the inspected code.
