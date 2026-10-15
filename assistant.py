@@ -4,6 +4,7 @@ from tools.file_system import FileSystemTool
 from approval_manager import ApprovalManager
 from tools.calculator import CalculatorTool
 from memory_manager import MemoryManager
+from tools.tool_policy import ToolPolicy
 from system_prompt import SYSTEM_PROMPT
 from tools.time_tool import TimeTool
 from llm_client import LLMClient
@@ -26,6 +27,7 @@ class Assistant:
         self.timer = TimeTool()
         self.manager = MemoryManager()
         self.approval_manager = ApprovalManager()
+        self.tool_policy = ToolPolicy()
 
         #path is current working directory
         self.project_context = ProjectContext(str(Path.cwd()))
@@ -220,11 +222,16 @@ class Assistant:
             if isinstance(arguments, str):
                 arguments = json.loads(arguments)
 
-            if not isinstance(arguments, dict):
+            # Check central tool permissions
+            permission = self.tool_policy.get_permission(name)
+
+            if permission == "deny":
                 return {
                     "success": False,
-                    "error": "Invalid tool arguments."
+                    "error": f"Tool '{name}' is not permitted."
                 }
+            
+            ## DISPATCHER 
             # TIME
             if name == "time":
                 result = self.timer.get_time()
