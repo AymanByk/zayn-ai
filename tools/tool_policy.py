@@ -34,3 +34,6 @@ class ToolPolicy:
 
         # Unknown tools are blocked by default
         return "deny"
+
+    def requires_approval(self, tool_name: str) -> bool:
+        return self.get_permission(tool_name) == "approval"

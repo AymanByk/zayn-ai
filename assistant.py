@@ -164,6 +164,10 @@ class Assistant:
                     print(f"\nZayn error: {final_message['error']}")
                     return True
 
+                # Final response must not introduce new tool calls
+                if final_message.get("tool_calls"):
+                    return True
+
                 self.messages.append(final_message)
 
                 return True
@@ -452,15 +456,18 @@ class Assistant:
                         "error": "Parent directory does not exist."
                     }
 
-                # User's appoval
-                if not self.approval_manager.file_creation(
-                    str(relative), content, encoding, data
-                ):
-                    return {
-                        "success": False,
-                        "cancelled": True,
-                        "error": "Cancelled by user."
-                    }
+                # User's approval
+                if self.tool_policy.requires_approval(name):
+                    approved = self.approval_manager.file_creation(
+                        str(relative), content, encoding, data
+                    )
+
+                    if not approved:
+                        return {
+                            "success": False,
+                            "cancelled": True,
+                            "error": "Cancelled by user."
+                        }
 
                 return self.file_system.create_file(
                     str(relative),
@@ -528,15 +535,18 @@ class Assistant:
                         "error": f"Expected exactly one match, found {matches}."
                     }
                 
-                # USER approval
-                if not self.approval_manager.text_replacement(
-                    str(relative), old_text, new_text
-                ):
-                    return {
-                        "success": False,
-                        "cancelled": True,
-                        "error": "Cancelled by user."
-                    }
+                # USER's approval
+                if self.tool_policy.requires_approval(name):
+                    approved = self.approval_manager.text_replacement(
+                        str(relative), old_text, new_text
+                    )
+
+                    if not approved:
+                        return {
+                            "success": False,
+                            "cancelled": True,
+                            "error": "Cancelled by user."
+                        }
 
                 return self.file_system.replace_text(
                     path=str(relative),

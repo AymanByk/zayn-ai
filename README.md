@@ -104,7 +104,9 @@ zayn-ai/
 ├── llm_client.py
 ├── memory_manager.py
 ├── system_prompt.py
-│
+├── tests/
+|   ├── test_approval_manager.py
+│   └── test_tool_policy.py
 ├── tools/
 │   ├── __init__.py
 |   ├── tool_definitions.py
